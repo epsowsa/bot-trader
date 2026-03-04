@@ -108,13 +108,9 @@ def get_live_games():
     headers = {"x-apisports-key": API_FOOTBALL_KEY}
 
     try:
-
         data = requests.get(url, headers=headers, timeout=10).json()
-
         return data.get("response", [])
-
     except:
-
         return []
 
 def get_statistics(fixture_id):
@@ -124,11 +120,8 @@ def get_statistics(fixture_id):
     headers = {"x-apisports-key": API_FOOTBALL_KEY}
 
     try:
-
         data = requests.get(url, headers=headers, timeout=10).json().get("response", [])
-
     except:
-
         return None
 
     if not data:
@@ -140,17 +133,13 @@ def get_statistics(fixture_id):
     def get_stat(stats, name):
 
         for item in stats:
-
             if item["type"] == name:
-
                 return item["value"] if item["value"] else 0
 
         return 0
 
     shots = get_stat(stats_home, "Total Shots") + get_stat(stats_away, "Total Shots")
-
     shots_on_target = get_stat(stats_home, "Shots on Goal") + get_stat(stats_away, "Shots on Goal")
-
     dangerous_attacks = get_stat(stats_home, "Dangerous Attacks") + get_stat(stats_away, "Dangerous Attacks")
 
     return shots, shots_on_target, dangerous_attacks
@@ -164,11 +153,8 @@ def get_over_odds():
     url = f"https://api.the-odds-api.com/v4/sports/soccer/odds/?regions=eu&markets=totals&apiKey={ODDS_API_KEY}"
 
     try:
-
         data = requests.get(url, timeout=10).json()
-
     except:
-
         return {}
 
     odds_dict = {}
@@ -205,22 +191,17 @@ def get_fixture_result(fixture_id):
     headers = {"x-apisports-key": API_FOOTBALL_KEY}
 
     try:
-
         data = requests.get(url, headers=headers, timeout=10).json().get("response", [])
-
     except:
-
         return None
 
     if not data:
         return None
 
     return (
-
         data[0]["goals"]["home"],
         data[0]["goals"]["away"],
         data[0]["fixture"]["status"]["short"]
-
     )
 
 def save_result(row):
@@ -254,27 +235,22 @@ async def main_loop():
         try:
 
             games = get_live_games()
-
             odds_market = get_over_odds()
 
             for game in games:
 
                 fixture_id = game["fixture"]["id"]
-
                 minute = game["fixture"]["status"]["elapsed"]
 
                 home = game["teams"]["home"]["name"]
-
                 away = game["teams"]["away"]["name"]
 
                 if not minute or fixture_id in alerted_games:
-
                     continue
 
                 stats = get_statistics(fixture_id)
 
                 if not stats:
-
                     continue
 
                 shots, shots_on_target, dangerous_attacks = stats
@@ -284,7 +260,6 @@ async def main_loop():
                 match_key = f"{home} vs {away}"
 
                 if match_key not in odds_market:
-
                     continue
 
                 odd = odds_market[match_key]
@@ -313,29 +288,20 @@ Stake: R${stake}
 """
 
                     await bot.send_message(
-
                         chat_id=CHAT_ID,
-
                         text=message
-
                     )
 
                     active_trades[fixture_id] = {
-
                         "home": home,
-
                         "away": away
-
                     }
-
-            # RESULTADOS
 
             for fixture_id in list(active_trades.keys()):
 
                 result = get_fixture_result(fixture_id)
 
                 if not result:
-
                     continue
 
                 goals_home, goals_away, status = result
@@ -347,13 +313,10 @@ Stake: R${stake}
                     outcome = "GREEN ✅" if total_goals >= 2 else "RED ❌"
 
                     home = active_trades[fixture_id]["home"]
-
                     away = active_trades[fixture_id]["away"]
 
                     await bot.send_message(
-
                         chat_id=CHAT_ID,
-
                         text=f"""
 📊 RESULTADO FINAL
 
@@ -363,21 +326,14 @@ Placar: {goals_home} x {goals_away}
 
 Resultado: {outcome}
 """
-
                     )
 
                     save_result([
-
                         datetime.now(),
-
                         home,
-
                         away,
-
                         total_goals,
-
                         outcome
-
                     ])
 
                     del active_trades[fixture_id]
@@ -393,21 +349,14 @@ Resultado: {outcome}
 print("BOT EPSTRADER ONLINE 🚀")
 
 asyncio.run(bot.send_message(
-
     chat_id=CHAT_ID,
-
     text="🚀 BOT EPSTRADER ONLINE"
-
 ))
 
 while True:
 
     try:
-
         asyncio.run(main_loop())
-
     except Exception as e:
-
         print("ERRO CRÍTICO:", e)
-
         time.sleep(10)
