@@ -266,21 +266,15 @@ print("BOT MODELO COMPLETO ATIVO 🔥")
 async def start_bot():
     await bot.send_message(
         chat_id=CHAT_ID,
-        text="✅ BOT ONLINE"
+        text="🚀 BOT EPSTRADER ONLINE"
     )
 
 asyncio.run(start_bot())
 
 while True:
-
     try:
-
         asyncio.run(main_loop())
-
     except Exception as e:
-
         print("ERRO CRÍTICO:", e)
-
         print("Reiniciando em 10 segundos...")
-
         time.sleep(10)
