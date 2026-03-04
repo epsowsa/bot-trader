@@ -262,7 +262,14 @@ Resultado: {outcome}
 # ==========================
 
 print("BOT MODELO COMPLETO ATIVO 🔥")
-asyncio.run(bot.send_message(chat_id=CHAT_ID, text="✅ BOT ONLINE"))
+
+async def start_bot():
+    await bot.send_message(
+        chat_id=CHAT_ID,
+        text="✅ BOT ONLINE"
+    )
+
+asyncio.run(start_bot())
 
 while True:
 
