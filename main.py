@@ -1,17 +1,17 @@
 import asyncio
 import requests
-import csv
 from telegram import Bot
 from datetime import datetime
 
+# ==========================
 # CONFIG
+# ==========================
 
 TELEGRAM_TOKEN = "8710147086:AAFYsYJ0K9ibKC57_WpIzGi7jR6EaYkhV18"
 CHAT_ID = "6621233312"
 
 API_FOOTBALL_KEY = "b4f5533d0331652750f2e7bc2a14d359"
 ODDS_API_KEY = "efb6634f3177d56bb50599c1a7ba3e75"
-
 
 BANKROLL = 100
 RISK_PERCENT = 10
@@ -21,9 +21,10 @@ LAST_UPDATE_ID = None
 
 bot = Bot(token=TELEGRAM_TOKEN)
 
-active_trades = {}
 alerted_games = set()
 
+# ==========================
+# CALCULOS
 # ==========================
 
 def calculate_stake():
@@ -47,13 +48,15 @@ async def check_commands():
 
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates"
 
-    data = requests.get(url).json()
+    try:
+        data = requests.get(url).json()
+    except:
+        return
 
     if not data["result"]:
         return
 
     update = data["result"][-1]
-
     update_id = update["update_id"]
 
     if LAST_UPDATE_ID == update_id:
@@ -64,7 +67,7 @@ async def check_commands():
     if "message" not in update:
         return
 
-    message = update["message"].get("text","")
+    message = update["message"].get("text", "")
 
     if message == "/stopbot":
 
@@ -94,7 +97,7 @@ async def check_commands():
         )
 
 # ==========================
-# API
+# API FOOTBALL
 # ==========================
 
 def get_live_games():
@@ -129,7 +132,6 @@ def get_statistics(fixture_id):
     def get_stat(stats, name):
 
         for item in stats:
-
             if item["type"] == name:
                 return item["value"] if item["value"] else 0
 
@@ -141,6 +143,8 @@ def get_statistics(fixture_id):
 
     return shots, shots_on_target, dangerous_attacks
 
+# ==========================
+# ODDS API
 # ==========================
 
 def get_over_odds():
@@ -176,80 +180,115 @@ def get_over_odds():
     return odds_dict
 
 # ==========================
+# LOOP PRINCIPAL
+# ==========================
 
 async def main_loop():
 
-    await bot.send_message(chat_id=CHAT_ID,text="🚀 BOT EPSTRADER ONLINE")
+    await bot.send_message(
+        chat_id=CHAT_ID,
+        text="🚀 BOT EPSTRADER ONLINE"
+    )
 
     while True:
 
-        await check_commands()
+        try:
 
-        if not BOT_ATIVO:
+            await check_commands()
 
-            print("Bot pausado...")
-            await asyncio.sleep(30)
-            continue
+            if not BOT_ATIVO:
 
-        print("Analisando jogos...")
-
-        games = get_live_games()
-        odds_market = get_over_odds()
-
-        for game in games:
-
-            fixture_id = game["fixture"]["id"]
-            minute = game["fixture"]["status"]["elapsed"]
-
-            home = game["teams"]["home"]["name"]
-            away = game["teams"]["away"]["name"]
-
-            if not minute or fixture_id in alerted_games:
+                print("Bot pausado...")
+                await asyncio.sleep(30)
                 continue
 
-            stats = get_statistics(fixture_id)
+            print("BOT RODANDO:", datetime.now())
 
-            if not stats:
-                continue
+            games = get_live_games()
+            odds_market = get_over_odds()
 
-            shots,shots_on_target,dangerous_attacks = stats
+            for game in games:
 
-            score = calculate_score(shots,shots_on_target,dangerous_attacks)
+                fixture_id = game["fixture"]["id"]
+                minute = game["fixture"]["status"]["elapsed"]
 
-            match_key = f"{home} vs {away}"
+                home = game["teams"]["home"]["name"]
+                away = game["teams"]["away"]["name"]
 
-            if match_key not in odds_market:
-                continue
+                if not minute or fixture_id in alerted_games:
+                    continue
 
-            odd = odds_market[match_key]
+                stats = get_statistics(fixture_id)
 
-            prob_model = score / 100
+                if not stats:
+                    continue
 
-            ev = calculate_ev(prob_model,odd)
+                shots,shots_on_target,dangerous_attacks = stats
 
-            if score >= 65 and ev > 0.05:
+                score = calculate_score(
+                    shots,
+                    shots_on_target,
+                    dangerous_attacks
+                )
 
-                alerted_games.add(fixture_id)
+                match_key = f"{home} vs {away}"
 
-                stake = calculate_stake()
+                if match_key not in odds_market:
+                    continue
 
-                message = f"""
+                odd = odds_market[match_key]
+
+                prob_model = score / 100
+
+                ev = calculate_ev(prob_model, odd)
+
+                if score >= 65 and ev > 0.05:
+
+                    alerted_games.add(fixture_id)
+
+                    stake = calculate_stake()
+
+                    message = f"""
 🔥 ENTRADA EV+ 🔥
+
 {home} x {away}
 
 Minuto: {minute}
 
-Score: {score}
-Odd: {odd}
+Score pressão: {score}
+Odd mercado: {odd}
 EV+: {ev}
 
 Stake: R${stake}
 """
 
-                await bot.send_message(chat_id=CHAT_ID,text=message)
+                    await bot.send_message(
+                        chat_id=CHAT_ID,
+                        text=message
+                    )
+
+        except Exception as e:
+
+            print("ERRO LOOP:", e)
 
         await asyncio.sleep(180)
 
 # ==========================
+# RUNNER
+# ==========================
 
-asyncio.run(main_loop())
+async def runner():
+
+    while True:
+
+        try:
+
+            await main_loop()
+
+        except Exception as e:
+
+            print("ERRO GERAL:", e)
+
+            await asyncio.sleep(10)
+
+asyncio.run(runner())
